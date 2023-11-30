@@ -12,7 +12,9 @@ It also contains an Application Project within `App/` that demonstrates the impl
 
 To build the application use either `fastlane` on command line or open the Xcode Project `App/dsrpoc.xcodeproj`.
 
-The PoC Endpoints are not reachable by this demo as there is an API key to use. Please contact us if you want to test this.
+The PoC Endpoints are not reachable by this demo as there is an API key to use (you need to fill `development.env`, example within `development.env.default`). Please contact us if you want to test this.
+
+The repository contains a certificate and a private key to mimic an eGK in software.
 
 ## License
  
