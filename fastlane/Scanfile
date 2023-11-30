@@ -1,0 +1,6 @@
+device("iPhone 14")
+
+project("App/dsrpoc.xcodeproj")
+derived_data_path("./DerivedData/")
+sdk("iphonesimulator")
+scheme("DeviceSecurityRatingTests")

@@ -1,0 +1,212 @@
+xcodes(version: "14.3.1", select_for_current_build_only: true, update_list: false)
+
+lane :test do |options|
+    scan(
+      configuration: "Debug",
+      build_for_testing: true
+    )
+    scan(
+      configuration: "Debug",
+      test_without_building: true
+    )
+end
+
+lane :sign_adhoc do |options|
+  match(type: "adhoc")
+
+  gym(
+    skip_build_archive: true,
+    export_method: "ad-hoc",
+    output_name: "dsr_#{build_version}_adhoc.ipa",
+    archive_path: "./distribution/dsr_#{build_version}.xcarchive",
+    output_directory: "./distribution",
+    include_bitcode: false,
+    export_options: {
+        uploadBitcode: false,
+        uploadSymbols: true,
+        compileBitcode: false
+    }
+  )
+end
+
+lane :sign_appstore do |options|
+  match(type: "appstore")
+
+  gym(
+    skip_build_archive: true,
+    export_method: "app-store",
+    output_name: "dsr_#{build_version}_store.ipa",
+    archive_path: "./distribution/dsr_#{build_version}.xcarchive",
+    output_directory: "./distribution"
+  )
+end
+
+lane :build_archive do |options|
+  clear_derived_data(derived_data_path: ENV['GYM_DERIVED_DATA_PATH'])
+
+  match(type: "appstore")
+
+  gym(
+    skip_build_archive: false,
+    skip_package_ipa: true,
+    export_method: "app-store",
+    archive_path: "./distribution/dsr_#{build_version}.xcarchive",
+    xcargs: "GEMATIK_SOURCE_VERSION=\"#{git_version}\" GEMATIK_BUNDLE_VERSION=\"#{build_version}\""
+  )
+end
+
+lane :build_test_version do |options|
+  build_archive
+
+  sign_adhoc
+
+  if is_ci
+    appcenter_upload(app_name: "DSR-iOS", release_notes: "branch #{ENV['GIT_BRANCH']} - #{ENV['BUILD_NUMBER']}")
+    add_mr_note_if_possible
+    notify_teams_channel(ENV["TEAMS_WEBHOOK_CI"], "CI Build")
+  end
+
+  sh "cd .. && mkdir -p artifacts/cibuild/ && rm -rf artifacts/cibuild/* && mv distribution artifacts/cibuild/; cd - "
+end
+
+desc "Build, sign and upload the iOS eRezeptApp to Testflight"
+lane :publish do |options|
+  build_archive
+
+  sign_adhoc
+  if is_ci
+    appcenter_upload(app_name: "DSR-iOS", release_notes: "Version #{ENV['GIT_BRANCH']} - #{ENV['BUILD_NUMBER']}")
+    notify_teams_channel(ENV["TEAMS_WEBHOOK_RELEASE"], "Neue Version")
+  end
+
+  sign_appstore
+
+  dry_run = false # isDryRun(options)
+  UI.message("Live run") unless dry_run
+  UI.message("Dry run") if dry_run
+  app_store_connect_api_key(
+    issuer_id: "69a6de92-74a9-47e3-e053-5b8c7c11a4d1"
+  )
+
+  upload_to_testflight(
+    ipa: "./distribution/dsr_#{build_version}_store.ipa",
+    skip_submission: true,
+    apple_id: '6450671837',
+    dev_portal_team_id: "A9FL89PFFL",
+    skip_waiting_for_build_processing: true
+  ) unless dry_run
+
+  sh "cd .. && mkdir -p artifacts/appstorebuild_pu/ && rm -rf artifacts/appstorebuild_pu/* && mv distribution artifacts/appstorebuild_pu/; cd - "
+end
+
+def add_mr_note_if_possible
+  if ENV['CHANGE_ID'] && !lane_context[SharedValues::APPCENTER_BUILD_INFORMATION].nil?
+    mr = ENV['CHANGE_ID']
+    app_name = lane_context[SharedValues::APPCENTER_BUILD_INFORMATION]['app_name']
+    id = lane_context[SharedValues::APPCENTER_BUILD_INFORMATION]['id']
+    owner = ENV['APPCENTER_OWNER_NAME']
+    appcenter_url = "https://install.appcenter.ms/orgs/#{owner}/apps/#{app_name}/releases/#{id}"
+    sh("glab auth login --token \"$GITLAB_API_TOKEN\" --hostname gitlab.prod.ccs.gematik.solutions")
+    sh("glab mr note #{mr} --message \"[Download Test Version in AppCenter](#{appcenter_url})\"")
+  end
+end
+
+def notify_teams_channel(url = "no_hook", stream = "Unknown stream", success = true, optional_message = "")
+  install_facts = []
+  if !lane_context[SharedValues::APPCENTER_BUILD_INFORMATION].nil?
+    app_name = lane_context[SharedValues::APPCENTER_BUILD_INFORMATION]['app_name']
+    id = lane_context[SharedValues::APPCENTER_BUILD_INFORMATION]['id']
+    owner = ENV['APPCENTER_OWNER_NAME']
+    appcenter_url = "https://install.appcenter.ms/orgs/#{owner}/apps/#{app_name}/releases/#{id}"
+
+    File.open("../distribution/build_info_#{ENV['BUILD_NUMBER']}.json", 'w+') do |file|
+      file.write({
+        "stream" => stream,
+        "url" => appcenter_url,
+      }.to_json)
+    end
+
+    install_facts = [
+      {"name" => "Build", "value"=> "[AppCenter](#{appcenter_url}) [QR-Code](https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=#{ERB::Util.url_encode(appcenter_url)})"}
+    ]
+
+  end # QR-codes and links
+
+  themeColor = success ? "00ff00" : "ff0000"
+  text = "# " << (success ? "" : "FAILED! ") << stream << "\n\n #{optional_message}"
+
+  facts = [
+    {"name"=> "Branch (commit)", "value"=> "#{ENV['GIT_BRANCH']} (#{git_version})"}
+  ] + install_facts
+
+  payload = {
+    "@type" => "MessageCard",
+    "@context" => "http://schema.org/extensions",
+    "summary" => "Notification from DSR-iOS",
+    "themeColor" => themeColor,
+    "sections"=> [
+      {
+        "activityTitle" => "Notification from DSR-iOS >> #{build_version} (#{git_version})",
+        "activitySubtitle" => "Build: #{ENV['JOB_NAME']} - #{ENV['BUILD_DISPLAY_NAME']} on worker #{ENV['NODE_NAME']}<br>Link: #{ENV['BUILD_URL']}",
+        "text" => text,
+        "facts" => facts
+      }
+    ]
+  }
+
+  # Send message
+  UI.message("Send notification to #{url}")
+  require 'net/http'
+  require 'uri'
+  json_headers = { 'Content-Type' => 'application/json' }
+  uri = URI.parse(url)
+  http = Net::HTTP.new(uri.host, uri.port)
+  http.use_ssl = true
+  response = http.post(uri.path, payload.to_json, json_headers)
+  if response.code.to_i == 200 && response.body.to_i == 1
+    UI.message("🍾 The message was sent successfully")
+    true
+  else
+    UI.user_error!("⚠️ An error occurred: #{response.body}")
+  end
+end
+
+def git_version()
+  short_hash = last_git_commit[:abbreviated_commit_hash]
+  dirty = sh("git diff --quiet || echo '-dirty'").strip!
+
+  "#{short_hash}#{dirty}"
+end
+
+def build_version()
+  ENV['BUILD_NUMBER'] || 'LOCAL_BUILD'
+end
+
+before_all do |lane, options|
+  load_keychain
+end
+
+after_all do |lane, options|
+  remove_keychain
+end
+
+error do |lane, exception, options|
+  remove_keychain
+end
+
+def load_keychain
+  remove_keychain
+
+  create_keychain(
+    name: "gematik",
+    password: "gematikpassword",
+    unlock: true,
+    timeout: 0
+  )
+end
+
+def remove_keychain
+  if File.exist? File.expand_path("~/Library/Keychains/gematik-db")
+    delete_keychain(name: "gematik") 
+  end
+end

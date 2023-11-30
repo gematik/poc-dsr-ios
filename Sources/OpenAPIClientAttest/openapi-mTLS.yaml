@@ -1,0 +1,210 @@
+---
+openapi: 3.0.3
+info:
+  title: Geräte Management Service (GMS) mTLS API
+  version: '1.0'
+  description: mTLS endpoints of the GMS
+
+servers:
+  - url: https://dsr.gms-mtls.dev.gematik.solutions
+    description: LTU DEV environment
+
+paths:
+  /device-registrations:
+    get:
+      description: 'Method to retrieve all device registrations of a user'
+      tags:
+        - Device Registration
+      parameters:
+        - in: query
+          name: userIdentifier
+          required: true
+          description: 'The identifier of the user (e.g. KVNR)'
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 'List of device registration of the given user'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeviceRegistration'
+        "400":
+          description: 'Bad Request'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebServiceError'
+        "500":
+          description: 'Internal Server Error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebServiceError'
+    delete:
+      description: 'Method to delete a device registration'
+      tags:
+        - Device Registration
+      parameters:
+        - in: query
+          name: userIdentifier
+          required: true
+          description: 'The identifier of the user (e.g. KVNR)'
+          schema:
+            type: string
+        - in: query
+          name: deviceIdentifier
+          required: true
+          description: 'The identifier of the device'
+          schema:
+            type: string
+      responses:
+        "204":
+          description: 'Device registration successfully deleted'
+        "400":
+          description: 'Bad Request'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebServiceError'
+        "404":
+          description: 'Device registration not found'
+        "500":
+          description: 'Internal Server Error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebServiceError'
+
+  /device-attestation:
+    post:
+      description: 'Method to trigger a device attestation - returns Authorization Code'
+      tags:
+        - Device Attestation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceAttestationRequest'
+      responses:
+        "200":
+          description: 'Authorization Code - Device AttestationToken verified'
+          content:
+            text/plain:
+              schema:
+                type: string
+        "400":
+          description: 'Bad Request - Device Attestation Token invalid'
+        "500":
+          description: 'Internal Server Error'
+
+  /device-token:
+    post:
+      description: 'Method to obtain a device token'
+      tags:
+        - Device Token
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - code
+                - code_verifier
+              properties:
+                code:
+                  type: string
+                  description: 'The authorization code received from the GMS'
+                code_verifier:
+                  type: string
+                  description: 'The code verifier created by the client'
+      responses:
+        "200":
+          description: 'OK'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceTokenResponse'
+        "202":
+          description: 'Processing of Device Attestation Token still in progress'
+        "400":
+          description: 'Bad Request'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebServiceError'
+        "500":
+          description: 'Internal Server Error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebServiceError'
+
+components:
+  schemas:
+    DeviceRegistration:
+      required:
+        - userIdentifier
+        - deviceIdentifier
+        - deviceType
+        - createdAt
+      type: object
+      properties:
+        userIdentifier:
+          type: string
+          description: 'The identifier of the user (e.g. KVNR)'
+        deviceIdentifier:
+          type: string
+          description: 'The identifier of the device'
+        deviceType:
+          type: string
+          enum: [ IOS, ANDROID ]
+          description: 'Type of the device'
+        createdAt:
+          type: string
+          format: date-time
+          description: 'Creation timestamp'
+
+    DeviceAttestationRequest:
+      required:
+        - token
+        - codeChallenge
+      type: object
+      properties:
+        token:
+          type: string
+          description: 'Device Attestation Token'
+        codeChallenge:
+          type: string
+          description: 'PKCE Code Challenge'
+
+    DeviceTokenResponse:
+      required:
+        - token
+      type: object
+      properties:
+        token:
+          type: string
+          description: 'Device Token - JWT'
+
+    WebServiceError:
+      required:
+        - errorCode
+        - description
+        - traceId
+      type: object
+      properties:
+        errorCode:
+          type: string
+          description: 'Identifier / code of the error / exception'
+        description:
+          type: string
+          description: 'Description of the error / exception'
+        traceId:
+          type: string
+          format: uuid
+          description: 'Id to track the error / exception'

@@ -1,0 +1,14 @@
+keychain_name("gematik")
+keychain_password("gematikpassword")
+
+git_branch("master")
+readonly(true)
+
+app_identifier("de.gematik.dsr")
+
+team_name("gematik Gesellschaft für Telematikanwendungen der Gesundheitskarte mbH")
+team_id("A9FL89PFFL")
+
+# Uncomment and fill this lines or add the corresponding ENV (MATCH_USERNAME, MATCH_GIT_URL) to call fastlane locally
+# username("")
+# git_url("")

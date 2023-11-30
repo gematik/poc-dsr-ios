@@ -1,0 +1,378 @@
+---
+openapi: 3.0.3
+info:
+  title: DSR POC Fachdienst API
+  version: '1.0'
+
+servers:
+  - url: http://localhost:8080
+  - url: https://dsr.fd.dev.gematik.solutions
+    description: LTU DEV environment
+
+paths:
+
+  /api/v1/erezept:
+    get:
+      description: 'Get all E-Rezepte'
+      tags:
+        - eRezept v1
+      parameters:
+        - $ref: '#/components/parameters/X-Device-Token-Header'
+      responses:
+        "200":
+          description: 'Returns a list of E-Rezepte'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ERezept_v1'
+        "500":
+          description: 'Internal Server Error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebServiceError'
+
+  /api/v1/erezept/{id}:
+    get:
+      description: 'Method to get a E-Rezept by Id'
+      tags:
+        - eRezept v1
+      parameters:
+        - $ref: '#/components/parameters/X-Device-Token-Header'
+        - in: path
+          name: id
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        "200":
+          description: 'Returns the E-Rezept for the given id'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ERezept_v1'
+        "404":
+          description: 'E-Rezept not found'
+        "500":
+          description: 'Internal Server Error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebServiceError'
+
+  /api/v2/erezept:
+    get:
+      description: 'Get all E-Rezepte'
+      tags:
+        - eRezept v2
+      parameters:
+        - $ref: '#/components/parameters/X-Device-Token-Header'
+      responses:
+        "200":
+          description: 'Returns a list of E-Rezepte'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ERezept_v2'
+        "500":
+          description: 'Internal Server Error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebServiceError'
+
+
+  /api/v2/erezept/{id}:
+    get:
+      description: 'Method to get a E-Rezept by Id'
+      tags:
+        - eRezept v2
+      parameters:
+        - $ref: '#/components/parameters/X-Device-Token-Header'
+        - in: path
+          name: id
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        "200":
+          description: 'Returns the E-Rezept for the given id'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ERezept_v2'
+        "404":
+          description: 'E-Rezept not found'
+        "500":
+          description: 'Internal Server Error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebServiceError'
+
+  /api/v1/notfalldaten:
+    get:
+      description: 'Method to get Notfalldaten by patient identifier'
+      tags:
+        - Notfalldaten
+      parameters:
+        - $ref: '#/components/parameters/X-Device-Token-Header'
+        - in: query
+          name: patientIdentifier
+          schema:
+            type: string
+          required: true
+      responses:
+        "200":
+          description: 'Returns the Notfalldaten for the given patient identifier'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notfalldaten'
+        "404":
+          description: 'Notfalldaten not found'
+        "500":
+          description: 'Internal Server Error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebServiceError'
+
+components:
+  schemas:
+
+    ERezept_v1:
+      # Definition of version 1 of the eRezept-scheme
+      required:
+        - id
+        - issuedAt
+        - patient
+        - doctor
+        - prescription
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 'E-Rezept identifier'
+        issuedAt:
+          type: string
+          format: date-time
+          description: 'E-Rezept issued at'
+        patient:
+          type: object
+          description: 'The patient of the E-Rezept'
+          required:
+            - name
+          properties:
+            name:
+              type: string
+            address:
+              type: string
+            contact:
+              type: string
+        doctor:
+          type: object
+          description: 'The doctor of the E-Rezept'
+          required:
+            - name
+          properties:
+            name:
+              type: string
+            address:
+              type: string
+            contact:
+              type: string
+        prescription:
+          type: object
+          description: 'Prescription of the E-Rezept'
+          required:
+            - medication
+          properties:
+            medication:
+              type: string
+            strength:
+              type: string
+            packSize:
+              type: string
+            dosageInstruction:
+              type: string
+
+    ERezept_v2:
+      # Definition of version 2 of the eRezept-scheme
+      required:
+        - id
+        - issuedAt
+        - patient
+        - doctor
+        - prescription
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 'E-Rezept identifier'
+        issuedAt:
+          type: string
+          format: date-time
+          description: 'E-Rezept issued at'
+        patient:
+          type: object
+          description: 'The patient of the E-Rezept'
+          required:
+            - name
+          properties:
+            name:
+              type: string
+            address:
+              type: object
+              description: 'The address of the E-Rezept patient'
+              required:
+                - street
+                - city
+                - postCode
+              properties:
+                street:
+                  type: string
+                city:
+                  type: string
+                postCode:
+                  type: string
+            contact:
+              type: string
+        doctor:
+          type: object
+          description: 'The doctor of the E-Rezept'
+          required:
+            - name
+          properties:
+            name:
+              type: string
+            address:
+              type: object
+              description: 'The address of the E-Rezept doctor'
+              required:
+                - street
+                - city
+                - postCode
+              properties:
+                street:
+                  type: string
+                city:
+                  type: string
+                postCode:
+                  type: string
+            contact:
+              type: string
+        prescription:
+          type: object
+          description: 'Prescription of the E-Rezept'
+          required:
+            - medication
+          properties:
+            medication:
+              type: string
+            strength:
+              type: string
+            packSize:
+              type: string
+            dosageInstruction:
+              type: string
+            specialRequirements:
+              type: string
+
+    Notfalldaten:
+      required:
+        - patientIdentifier
+        - patient
+      type: object
+      properties:
+        patientIdentifier:
+          type: string
+        patient:
+          type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+            dateOfBirth:
+              type: string
+              format: date
+              example: "1978-06-30"
+            bloodGroup:
+              type: string
+              example: "A-"
+            allergies:
+              type: array
+              items:
+                type: string
+            medications:
+              type: array
+              items:
+                type: string
+            medicalDiagnoses:
+              type: array
+              items:
+                type: string
+            pastMedicalHistory:
+              type: array
+              items:
+                type: string
+            emergencyContacts:
+              type: array
+              items:
+                type: object
+                required:
+                  - name
+                  - phone
+                properties:
+                  name:
+                    type: string
+                  relationship:
+                    type: string
+                    example: "Mutter"
+                  phone:
+                    type: string
+            insuranceInformation:
+              type: object
+              properties:
+                insuranceCompany:
+                  type: string
+                policyNumber:
+                  type: string
+            organDonation:
+              type: boolean
+
+    WebServiceError:
+      required:
+        - errorCode
+        - description
+        - traceId
+      type: object
+      properties:
+        errorCode:
+          type: string
+          description: 'Identifier / code of the error / exception'
+        description:
+          type: string
+          description: 'Description of the error / exception'
+        traceId:
+          type: string
+          format: uuid
+          description: 'Id to track the error / exception'
+
+  parameters:
+    X-Device-Token-Header:
+      name: X-Device-Token
+      in: header
+      description: 'DSR Device-Token'
+      required: true
+      schema:
+        type: string

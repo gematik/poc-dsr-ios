@@ -1,0 +1,4 @@
+project("App/dsrpoc.xcodeproj")
+scheme("dsrpoc")
+
+configuration("Release")
