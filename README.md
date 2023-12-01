@@ -1,4 +1,4 @@
-# DeviceSecurityRating
+# Device Security Rating - iOS Client
 
 Device Security Rating (DSR) is a Proof of Concept to demonstrate the secure access to services using Zero Trust design principles. In contrast to enterprise-centric Zero Trust architectures, where devices need to be owned and/or managed by a company, the DSR PoC is designed in a way that allows participants from different legal and organisational entities without the need of giving up the ownership of their devices.
 
@@ -18,7 +18,7 @@ The repository contains a certificate and a private key to mimic an eGK in softw
 
 ## License
  
-Copyright [Jahr] gematik GmbH
+Copyright 2023 gematik GmbH
  
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
  
