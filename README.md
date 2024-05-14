@@ -1,5 +1,8 @@
 # Device Security Rating - iOS Client
 
+> [!NOTE]
+> This software is a proof of concept and is not intended for production use. It will not be maintained or receive updates. Concepts from this project will be used in gematik specifications to standardize Zero Trust in Telematics Infrastructure. Developers are encouraged to use the implementation ideas in their own software.
+
 Device Security Rating (DSR) is a Proof of Concept to demonstrate the secure access to services using Zero Trust design principles. In contrast to enterprise-centric Zero Trust architectures, where devices need to be owned and/or managed by a company, the DSR PoC is designed in a way that allows participants from different legal and organisational entities without the need of giving up the ownership of their devices.
 
 This repository contains a proof of concept implementation of an iOS client. The whole system architecture and other implementations of the PoC can be found at [https://dsr.gematik.solutions](https://dsr.gematik.solutions).
