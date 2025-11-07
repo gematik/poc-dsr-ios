@@ -1,0 +1,6 @@
+./Sources/OpenAPIClientAttest/Types.swift
+./Sources/OpenAPIClientAttest/Client.swift
+./Sources/OpenAPIClientInit/Types.swift
+./Sources/OpenAPIClientInit/Client.swift
+./App/DeviceSecurityRatingApp/Sources/DeviceSecurityRatingApp/Sources/FD/Types.swift
+./App/DeviceSecurityRatingApp/Sources/DeviceSecurityRatingApp/Sources/FD/Client.swift
